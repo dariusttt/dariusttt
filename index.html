@@ -1091,6 +1091,9 @@ const sv = id => $(id)?.value?.trim() || '';
 const r2 = v  => Math.round(v * 100) / 100;
 const fmt = n => Number(n||0).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtL = n => Number(n||0).toFixed(2);
+// Escape text before putting it into innerHTML (customer, item and branch names are typed by users)
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch =>
+  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 
 // ── Backend API (server.py). Falls back to localStorage when opened as a file ──
 const API_BASE = location.protocol.startsWith('http') ? '/api' : null;
@@ -1731,14 +1734,14 @@ function renderInvoices() {
     tbody.innerHTML = INVOICES.map((inv, i) => `
       <tr>
         <td style="color:var(--mut)">${i+1}</td>
-        <td>${inv.customer}</td>
-        <td style="color:var(--acc2)">${inv.company || '—'}</td>
-        <td style="color:var(--blue)">${inv.carReg || '—'}</td>
-        <td>${inv.phone || '—'}</td>
-        <td>${inv.fuelType}</td>
+        <td>${esc(inv.customer)}</td>
+        <td style="color:var(--acc2)">${esc(inv.company || '—')}</td>
+        <td style="color:var(--blue)">${esc(inv.carReg || '—')}</td>
+        <td>${esc(inv.phone || '—')}</td>
+        <td>${esc(inv.fuelType)}</td>
         <td style="color:var(--purple)">KES ${fmt(inv.amount)}</td>
-        <td><button class="btn btn-o" style="padding:3px 9px;font-size:.65rem" onclick="printInvoice(${inv.id})">🖨️</button></td>
-        <td><button class="btn btn-r" style="padding:3px 9px;font-size:.65rem" onclick="deleteInvoice(${inv.id})">✕</button></td>
+        <td><button class="btn btn-o" style="padding:3px 9px;font-size:.65rem" onclick="printInvoice(${Number(inv.id)})">🖨️</button></td>
+        <td><button class="btn btn-r" style="padding:3px 9px;font-size:.65rem" onclick="deleteInvoice(${Number(inv.id)})">✕</button></td>
       </tr>
     `).join('');
   }
@@ -1810,10 +1813,10 @@ function renderMiscItems() {
     list.innerHTML = MISC_ITEMS.map(item => `
       <div style="display:flex;align-items:center;gap:10px;background:var(--s2);
         border:1px solid var(--brd);border-radius:7px;padding:8px 12px;font-family:var(--mono);font-size:.78rem">
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${item.name}">${item.name}</span>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${esc(item.name)}">${esc(item.name)}</span>
         <span style="flex-shrink:0;color:var(--acc2);font-weight:600">KES ${fmt(item.amount)}</span>
         <button class="btn btn-r" style="flex-shrink:0;padding:2px 8px;font-size:.62rem"
-          onclick="deleteMiscItem(${item.id})">✕</button>
+          onclick="deleteMiscItem(${Number(item.id)})">✕</button>
       </div>
     `).join('');
   }
@@ -1892,13 +1895,13 @@ function renderGasItems() {
       return `
       <div style="display:flex;align-items:center;gap:10px;background:var(--s2);
         border:1px solid var(--brd);border-radius:7px;padding:8px 12px;font-family:var(--mono);font-size:.78rem">
-        <span style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${item.name}">${item.name}</span>
+        <span style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${esc(item.name)}">${esc(item.name)}</span>
         <span style="flex-shrink:0;color:${catColor};font-size:.68rem;border:1px solid ${catColor};
-          border-radius:4px;padding:1px 7px;text-align:center">${item.category}</span>
-        <span style="flex-shrink:0;color:var(--mut);white-space:nowrap">${item.qty} × KES ${fmt(item.price)}</span>
+          border-radius:4px;padding:1px 7px;text-align:center">${esc(item.category)}</span>
+        <span style="flex-shrink:0;color:var(--mut);white-space:nowrap">${esc(item.qty)} × KES ${fmt(item.price)}</span>
         <span style="flex-shrink:0;color:var(--acc2);font-weight:600;text-align:right;white-space:nowrap">KES ${fmt(lineTotal)}</span>
         <button class="btn btn-r" style="flex-shrink:0;padding:2px 8px;font-size:.62rem"
-          onclick="deleteGasItem(${item.id})">✕</button>
+          onclick="deleteGasItem(${Number(item.id)})">✕</button>
       </div>`;
     }).join('');
   }
@@ -1935,7 +1938,7 @@ function printInvoice(id) {
 
   const win = window.open('', '_blank', 'width=420,height=600');
   win.document.write(`
-    <html><head><title>${inv.invoiceNo}</title>
+    <html><head><title>${esc(inv.invoiceNo)}</title>
     <style>
       body{font-family:'IBM Plex Mono',monospace;padding:24px;color:#111;max-width:380px;margin:0 auto}
       h1{font-size:16px;margin:0 0 2px}
@@ -1946,14 +1949,14 @@ function printInvoice(id) {
       .foot{margin-top:24px;font-size:10px;color:#888;text-align:center}
     </style></head>
     <body>
-      <h1>⛽ ${inv.station || 'PetroKenya'}</h1>
-      <div class="sub">Fuel Credit Invoice &nbsp;·&nbsp; ${inv.invoiceNo}</div>
-      <div class="row"><span>Date</span><span>${inv.date}</span></div>
-      <div class="row"><span>Customer Name</span><span>${inv.customer}</span></div>
-      <div class="row"><span>Company</span><span>${inv.company || '—'}</span></div>
-      <div class="row"><span>Car Reg. No.</span><span>${inv.carReg || '—'}</span></div>
-      <div class="row"><span>Phone Number</span><span>${inv.phone || '—'}</span></div>
-      <div class="row"><span>Fuel Type</span><span>${inv.fuelType}</span></div>
+      <h1>⛽ ${esc(inv.station || 'PetroKenya')}</h1>
+      <div class="sub">Fuel Credit Invoice &nbsp;·&nbsp; ${esc(inv.invoiceNo)}</div>
+      <div class="row"><span>Date</span><span>${esc(inv.date)}</span></div>
+      <div class="row"><span>Customer Name</span><span>${esc(inv.customer)}</span></div>
+      <div class="row"><span>Company</span><span>${esc(inv.company || '—')}</span></div>
+      <div class="row"><span>Car Reg. No.</span><span>${esc(inv.carReg || '—')}</span></div>
+      <div class="row"><span>Phone Number</span><span>${esc(inv.phone || '—')}</span></div>
+      <div class="row"><span>Fuel Type</span><span>${esc(inv.fuelType)}</span></div>
       <div class="total"><span>AMOUNT DUE</span><span>KES ${fmt(inv.amount)}</span></div>
       <div class="foot">Thank you for fuelling with us.<br>This is a credit invoice — payment terms apply.</div>
     </body></html>
@@ -1984,7 +1987,7 @@ function loadRecs() {
   if (!display.length) {
     tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:36px;
       color:var(--mut);font-family:var(--mono);font-size:.76rem">
-      ${filterBranch ? `No records for ${filterBranch} yet.` : 'No records saved yet.'}<br>
+      ${filterBranch ? `No records for ${esc(filterBranch)} yet.` : 'No records saved yet.'}<br>
       Fill in today\'s data and click 💾 Save Daily Record.
     </td></tr>`;
     return;
@@ -2014,8 +2017,8 @@ function loadRecs() {
 
       return `<tr data-id="${safeId}" onclick="openDetail(event, ${safeId})" style="cursor:pointer">
         <td style="color:var(--mut)">${idLabel}</td>
-        <td>${r.report_date || '—'}</td>
-        <td style="color:var(--acc2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.station || '—'}</td>
+        <td>${esc(r.report_date || '—')}</td>
+        <td style="color:var(--acc2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${esc(r.station || '—')}</td>
         <td>${fmtL(pLit)}</td>
         <td>${fmtL(dLit)}</td>
         <td style="color:var(--blue)">${fmtL(totLit)}</td>
@@ -2038,7 +2041,7 @@ function loadRecs() {
   } catch(e) {
     console.error('loadRecs render error:', e);
     tbody.innerHTML = `<tr><td colspan="14" style="color:var(--red);padding:20px;font-family:var(--mono);font-size:.74rem">
-      Render error: ${e.message} — try clearing localStorage.
+      Render error: ${esc(e.message)} — try clearing localStorage.
     </td></tr>`;
   }
 }
@@ -2158,7 +2161,7 @@ function openDetail(evt, id) {
   if (r.gas_items && r.gas_items.length) {
     gasSec.style.display = 'block';
     gasList.innerHTML = r.gas_items.map(i =>
-      `<div class="m-row"><span>${i.name} (${i.category}) — ${i.qty} × KES ${fmt(i.price)}</span><span>KES ${fmt(i.qty * i.price)}</span></div>`
+      `<div class="m-row"><span>${esc(i.name)} (${esc(i.category)}) — ${esc(i.qty)} × KES ${fmt(i.price)}</span><span>KES ${fmt(i.qty * i.price)}</span></div>`
     ).join('') + `<div class="m-row" style="border-top:1px solid var(--brd);margin-top:4px;padding-top:6px">
       <span><b>Gas/Lube Revenue</b></span><span>KES ${fmt(r.gas_lube_revenue || 0)}</span></div>`;
   } else {
@@ -2178,7 +2181,7 @@ function openDetail(evt, id) {
   if (r.invoices && r.invoices.length) {
     invSec.style.display = 'block';
     invList.innerHTML = r.invoices.map(inv =>
-      `<div class="m-row"><span>${inv.customer || '—'}${inv.company ? ' · ' + inv.company : ''}${inv.carReg ? ' · ' + inv.carReg : ''}</span><span>KES ${fmt(inv.amount || 0)}</span></div>`
+      `<div class="m-row"><span>${esc(inv.customer || '—')}${esc(inv.company ? ' · ' + inv.company : '')}${esc(inv.carReg ? ' · ' + inv.carReg : '')}</span><span>KES ${fmt(inv.amount || 0)}</span></div>`
     ).join('');
   } else {
     invSec.style.display = 'none';
@@ -2195,7 +2198,7 @@ function openDetail(evt, id) {
   const miscList = $('rdMiscItems');
   if (r.misc_items && r.misc_items.length) {
     miscList.innerHTML = r.misc_items.map(i =>
-      `<div class="m-row" style="padding-left:12px;font-size:.72rem;color:var(--mut)"><span>↳ ${i.name}</span><span>KES ${fmt(i.amount)}</span></div>`
+      `<div class="m-row" style="padding-left:12px;font-size:.72rem;color:var(--mut)"><span>↳ ${esc(i.name)}</span><span>KES ${fmt(i.amount)}</span></div>`
     ).join('');
   } else {
     miscList.innerHTML = '';
@@ -2351,7 +2354,7 @@ function renderBars(id, data, field, color) {
     const lbl = (r.report_date || '').substring(5) || '—';
     const barColor = v < 0 ? 'var(--red)' : color;
     return `<div class="cb-row">
-      <div class="cb-lbl" title="${r.report_date || ''}">${lbl}</div>
+      <div class="cb-lbl" title="${esc(r.report_date || '')}">${esc(lbl)}</div>
       <div class="cb-track">
         <div class="cb-fill" style="width:${pct}%;background:${barColor}"></div>
       </div>
@@ -2404,7 +2407,8 @@ function exportCSV() {
   ];
   const escape = v => {
     if (v === null || v === undefined) return '';
-    const s = String(v);
+    let s = String(v);
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return s.includes(',') || s.includes('"') || s.includes('\n')
       ? '"' + s.replace(/"/g, '""') + '"'
       : s;
