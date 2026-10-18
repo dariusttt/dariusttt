@@ -222,6 +222,24 @@ tr:hover td{background:var(--s2)}
   .card-val,.pv,.kcc-item .val{color:#000!important}
 }
 
+/* ════ VERTICAL MENU ════ */
+/* Sidebar menu on wide screens; on phones the list stacks above the section */
+.workspace{display:grid;grid-template-columns:230px minmax(0,1fr);gap:22px;align-items:start}
+.workspace .tabs{flex-direction:column;gap:3px;overflow:visible;margin-bottom:0;
+  border-bottom:none;border-right:1px solid var(--brd);padding-right:14px;
+  position:sticky;top:calc(env(safe-area-inset-top,0px) + 96px)}
+.workspace .tab-btn{text-align:left;white-space:normal;margin-bottom:0;padding:11px 14px;
+  border-bottom:none;border-left:3px solid transparent;border-radius:0 7px 7px 0;font-size:.76rem}
+.workspace .tab-btn.on{border-left-color:var(--acc);background:rgba(62,207,50,.08)}
+.panels{min-width:0}
+.panel{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 120px)}
+@media (max-width:760px){
+  .workspace{grid-template-columns:minmax(0,1fr);gap:16px}
+  .workspace .tabs{position:static;border-right:none;padding-right:0;padding-bottom:12px;
+    border-bottom:1px solid var(--brd)}
+  .workspace .tab-btn{padding:12px 14px;font-size:.8rem}
+}
+
 /* ════ TOAST ════ */
 #toast{position:fixed;bottom:20px;right:20px;background:var(--s1);
   border:1px solid var(--acc);border-radius:10px;padding:12px 18px;
@@ -345,7 +363,8 @@ tr:hover td{background:var(--s2)}
   <hr class="sep">
 
   <!-- ══ TABS ══ -->
-  <div class="tabs" id="tabBar">
+  <div class="workspace">
+  <div class="tabs" id="tabBar" role="tablist" aria-orientation="vertical">
     <button class="tab-btn on"  onclick="tab('fuel',this)">⛽ Fuel Entry</button>
     <button class="tab-btn"     onclick="tab('pay',this)">💳 Payments</button>
     <button class="tab-btn"     onclick="tab('gas',this)">🛢️ Gases & Lubricants</button>
@@ -356,6 +375,7 @@ tr:hover td{background:var(--s2)}
     <button class="tab-btn"     onclick="tab('rec',this)">🗂️ Records</button>
   </div>
 
+  <div class="panels">
   <!-- ══ PANEL: FUEL ══ -->
   <div class="panel on" id="p-fuel">
     <div class="g2">
@@ -912,6 +932,9 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
 
+  </div><!-- /panels -->
+  </div><!-- /workspace -->
+
 </main>
 
 <!-- ══ KRA MODAL ══ -->
@@ -1416,6 +1439,8 @@ function tab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
   $('p-'+name).classList.add('on');
   btn.classList.add('on');
+  // On phones the menu sits above the section, so jump down to what was opened
+  if (window.matchMedia('(max-width:760px)').matches) $('p-'+name).scrollIntoView({ block: 'start' });
   if (name === 'ana') renderAnalytics();
   if (name === 'rec') loadRecs();
 }
