@@ -222,23 +222,27 @@ tr:hover td{background:var(--s2)}
   .card-val,.pv,.kcc-item .val{color:#000!important}
 }
 
-/* ════ VERTICAL MENU ════ */
-/* Sidebar menu on wide screens; on phones the list stacks above the section */
-.workspace{display:grid;grid-template-columns:230px minmax(0,1fr);gap:22px;align-items:start}
-.workspace .tabs{flex-direction:column;gap:3px;overflow:visible;margin-bottom:0;
-  border-bottom:none;border-right:1px solid var(--brd);padding-right:14px;
-  position:sticky;top:calc(env(safe-area-inset-top,0px) + 96px)}
-.workspace .tab-btn{text-align:left;white-space:normal;margin-bottom:0;padding:11px 14px;
-  border-bottom:none;border-left:3px solid transparent;border-radius:0 7px 7px 0;font-size:.76rem}
-.workspace .tab-btn.on{border-left-color:var(--acc);background:rgba(62,207,50,.08)}
-.panels{min-width:0}
-.panel{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 120px)}
-@media (max-width:760px){
-  .workspace{grid-template-columns:minmax(0,1fr);gap:16px}
-  .workspace .tabs{position:static;border-right:none;padding-right:0;padding-bottom:12px;
-    border-bottom:1px solid var(--brd)}
-  .workspace .tab-btn{padding:12px 14px;font-size:.8rem}
-}
+/* ════ PAGES ════ */
+/* Home shows the summary and a menu; each menu item opens its section as a page of its own */
+.workspace{display:block}
+.workspace .tabs{flex-direction:column;gap:8px;overflow:visible;margin-bottom:0;border-bottom:none}
+.workspace .tab-btn{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;
+  text-align:left;white-space:normal;margin-bottom:0;padding:14px 16px;border:1px solid var(--brd);
+  border-radius:10px;background:var(--s1);font-size:.8rem;color:var(--txt)}
+.workspace .tab-btn::after{content:'›';grid-column:2;grid-row:1 / span 2;font-size:1.5rem;color:var(--mut);line-height:1}
+.workspace .tab-btn:hover{border-color:var(--acc);background:var(--s2)}
+.tab-name{grid-column:1;font-family:var(--sans);font-weight:700;font-size:.92rem}
+.tab-desc{grid-column:1;font-size:.7rem;color:var(--mut)}
+.page-bar{display:none;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--brd)}
+.page-title{font-weight:800;font-size:1.15rem;line-height:1.2}
+.page-ctx{font-family:var(--mono);font-size:.7rem;color:var(--mut);margin-top:3px}
+.back-btn{flex-shrink:0;padding:8px 14px;font-size:.8rem}
+/* Home view */
+body:not(.in-page) .panels .panel{display:none}
+/* Section page view */
+body.in-page .home-only,body.in-page .top-bar,body.in-page .cards,body.in-page .tabs{display:none}
+body.in-page .page-bar{display:flex}
+@media (min-width:761px){.workspace .tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
 
 /* ════ TOAST ════ */
 #toast{position:fixed;bottom:20px;right:20px;background:var(--s1);
@@ -308,7 +312,7 @@ tr:hover td{background:var(--s2)}
   </div>
 
   <!-- ── SUMMARY CARDS ── -->
-  <div class="stag">Live Summary — auto-calculated every keystroke</div>
+  <div class="stag home-only">Live Summary — auto-calculated every keystroke</div>
   <div class="cards">
     <div class="card" style="--c:#3ecf32">
       <div class="card-lbl">Total Sales</div>
@@ -360,24 +364,31 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
 
-  <hr class="sep">
+  <hr class="sep home-only">
 
   <!-- ══ TABS ══ -->
   <div class="workspace">
-  <div class="tabs" id="tabBar" role="tablist" aria-orientation="vertical">
-    <button class="tab-btn on"  onclick="tab('fuel',this)">⛽ Fuel Entry</button>
-    <button class="tab-btn"     onclick="tab('pay',this)">💳 Payments</button>
-    <button class="tab-btn"     onclick="tab('gas',this)">🛢️ Gases & Lubricants</button>
-    <button class="tab-btn"     onclick="tab('dips',this)">📏 Dips</button>
-    <button class="tab-btn"     onclick="tab('exp',this)">📋 Expenses</button>
-    <button class="tab-btn"     onclick="tab('kra',this)">🇰🇪 KRA Filing</button>
-    <button class="tab-btn"     onclick="tab('ana',this)">📊 Analytics</button>
-    <button class="tab-btn"     onclick="tab('rec',this)">🗂️ Records</button>
+  <div class="tabs" id="tabBar" aria-label="Sections">
+    <button class="tab-btn" onclick="tab('fuel',this)"><span class="tab-name">⛽ Fuel Entry</span><span class="tab-desc">Pump meter readings, prices and litres sold</span></button>
+    <button class="tab-btn" onclick="tab('pay',this)"><span class="tab-name">💳 Payments</span><span class="tab-desc">M-Pesa, cash, card and credit collected</span></button>
+    <button class="tab-btn" onclick="tab('gas',this)"><span class="tab-name">🛢️ Gases & Lubricants</span><span class="tab-desc">LPG cylinders, oils and other items sold</span></button>
+    <button class="tab-btn" onclick="tab('dips',this)"><span class="tab-name">📏 Dips</span><span class="tab-desc">Tank stock check against pump sales</span></button>
+    <button class="tab-btn" onclick="tab('exp',this)"><span class="tab-name">📋 Expenses</span><span class="tab-desc">Daily costs and credit customer invoices</span></button>
+    <button class="tab-btn" onclick="tab('kra',this)"><span class="tab-name">🇰🇪 KRA Filing</span><span class="tab-desc">VAT, excise and road levy for the day</span></button>
+    <button class="tab-btn" onclick="tab('ana',this)"><span class="tab-name">📊 Analytics</span><span class="tab-desc">Last 7 days and all-time totals</span></button>
+    <button class="tab-btn" onclick="tab('rec',this)"><span class="tab-name">🗂️ Records</span><span class="tab-desc">Saved days for every branch</span></button>
   </div>
 
   <div class="panels">
+    <div class="page-bar">
+      <button class="btn btn-o back-btn" onclick="goHome()" aria-label="Back to menu">‹ Back</button>
+      <div style="min-width:0">
+        <div class="page-title" id="pageTitle">—</div>
+        <div class="page-ctx" id="pageCtx">—</div>
+      </div>
+    </div>
   <!-- ══ PANEL: FUEL ══ -->
-  <div class="panel on" id="p-fuel">
+  <div class="panel" id="p-fuel">
     <div class="g2">
       <!-- PETROL -->
       <div class="box">
@@ -1434,16 +1445,55 @@ function setStatus(s) {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-function tab(name, btn) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
-  $('p-'+name).classList.add('on');
-  btn.classList.add('on');
-  // On phones the menu sits above the section, so jump down to what was opened
-  if (window.matchMedia('(max-width:760px)').matches) $('p-'+name).scrollIntoView({ block: 'start' });
-  if (name === 'ana') renderAnalytics();
-  if (name === 'rec') loadRecs();
+// ── Pages: the menu opens each section as its own page (#fuel, #pay …) ─────
+// The address hash keeps the browser / phone Back button working.
+const PAGES = ['fuel', 'pay', 'gas', 'dips', 'exp', 'kra', 'ana', 'rec'];
+let openedFromMenu = false;
+
+function showPage(name) {
+  const page = PAGES.includes(name) ? name : null;
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + page));
+  document.querySelectorAll('#tabBar .tab-btn').forEach(b =>
+    b.classList.toggle('on', (b.getAttribute('onclick') || '').includes("'" + page + "'")));
+  document.body.classList.toggle('in-page', !!page);
+  if (page) {
+    const btn = [...document.querySelectorAll('#tabBar .tab-btn')]
+      .find(b => (b.getAttribute('onclick') || '').includes("'" + page + "'"));
+    $('pageTitle').textContent = btn ? btn.querySelector('.tab-name').textContent : '';
+    updatePageContext();
+    if (page === 'ana') renderAnalytics();
+    if (page === 'rec') loadRecs();
+  }
+  window.scrollTo(0, 0);
 }
+
+function updatePageContext() {
+  const d = sv('fDate');
+  const when = d ? new Date(d + 'T00:00:00').toLocaleDateString('en-KE',
+    { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  $('pageCtx').textContent = [sv('fStation'), when].filter(Boolean).join(' · ');
+}
+
+function route() { showPage(location.hash.slice(1)); }
+
+// Called by the menu buttons
+function tab(name) {
+  openedFromMenu = true;
+  showPage(name);
+  try { if (location.hash !== '#' + name) location.hash = name; } catch (e) { /* no history here */ }
+}
+
+function goHome() {
+  if (openedFromMenu && location.hash) {
+    openedFromMenu = false;
+    history.back();                       // hashchange → route() shows the menu
+  } else {
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+    showPage(null);
+  }
+}
+
+window.addEventListener('hashchange', route);
 
 // ── localStorage DB (mirrors SQLite backend) ──────────────────────────────────
 // ── localStorage helpers ──────────────────────────────────────────────────────
@@ -2538,6 +2588,7 @@ async function init() {
 
   // Keep the date correct automatically if the app is left open overnight
   startMidnightWatcher();
+  route();
 
   // Also re-sync date when the tab regains focus (covers laptop sleep/wake)
   document.addEventListener('visibilitychange', () => {
