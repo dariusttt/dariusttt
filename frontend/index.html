@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>PetroKenya — Station Dashboard</title>
+<meta name="description" content="Daily fuel station sales, payments, dips, expenses and KRA tax for PetroKenya branches.">
+<meta name="theme-color" content="#080c08">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PetroKenya">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=18">
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">⛽</div>
+    <div class="logo-text">
+      <h1>Petro<span>Kenya</span></h1>
+      <small>STATION MANAGEMENT SYSTEM</small>
+    </div>
+  </div>
+  <div class="hdr-center">
+    <div class="status-pill ok" id="enginePill">
+      <span class="dot pulse"></span> Engine Ready
+    </div>
+    <div class="status-pill db-pill" id="dbPill">
+      <span class="dot"></span> Connecting…
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-info">
+      <div id="hStation" style="font-weight:600;color:var(--acc2)" translate="no">PetroKenya</div>
+      <div id="hDate"></div>
+    </div>
+    <button class="btn btn-o btn-sm" id="installBtn" style="display:none" onclick="installApp()">📲 Install</button>
+    <button class="btn btn-o btn-sm bell" id="alertBtn" hidden onclick="openAlerts()" aria-label="Alerts">🔔<span class="bell-count" id="alertCount" hidden></span></button>
+    <button class="btn btn-b btn-sm" id="userBtn" onclick="openAccount()">👤 Sign in</button>
+  </div>
+</header>
+
+<main>
+  <div class="warn-note" id="noBranchNote" hidden style="margin-bottom:14px"></div>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="date-grp">
+      <label>DATE:</label>
+      <input type="date" id="fDate" oninput="this.dataset.userEdited='1';loadRecordForDateAndStation()">
+    </div>
+    <div class="station-grp">
+      <label>STATION:</label>
+      <select id="fStation" onchange="document.getElementById('hStation').textContent=this.value||'PetroKenya';loadRecordForDateAndStation()">
+      </select>
+    </div>
+    <div class="station-grp">
+      <label>OPERATOR:</label>
+      <input type="text" id="fOperator" placeholder="Sign in to fill" readonly title="Filled in from the signed-in account">
+    </div>
+    <div class="station-grp">
+      <label>SHIFT:</label>
+      <select id="fShift">
+        <option>Day Shift (06:00–18:00)</option>
+        <option>Night Shift (18:00–06:00)</option>
+        <option>Full Day</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── SUMMARY CARDS ── -->
+  <div class="stag home-only">Live Summary — auto-calculated every keystroke</div>
+  <div class="cards">
+    <div class="card" style="--c:#3ecf32">
+      <div class="card-lbl">Total Sales</div>
+      <div class="card-val" id="cRev">KES 0</div>
+      <div class="card-unit">Kenyan Shillings (KES)</div>
+      <div class="card-sub" id="cRevSub">Awaiting fuel data…</div>
+    </div>
+    <div class="card" style="--c:#5bb8e0">
+      <div class="card-lbl">Litres Sold</div>
+      <div class="card-val" id="cLit">0.00</div>
+      <div class="card-unit">Total Litres</div>
+      <div class="card-sub" id="cLitSub">—</div>
+    </div>
+    <div class="card" style="--c:#00a651">
+      <div class="card-lbl">M-Pesa Received</div>
+      <div class="card-val" id="cMpesa">KES 0</div>
+      <div class="card-unit">Safaricom Mobile Money</div>
+      <div class="card-sub" id="cMpesaSub">0 transactions</div>
+    </div>
+    <div class="card" style="--c:#f5c518">
+      <div class="card-lbl">Cash at Hand</div>
+      <div class="card-val" id="cCash">KES 0</div>
+      <div class="card-unit">Physical Cash</div>
+      <div class="card-sub">Till + float</div>
+    </div>
+    <div class="card" style="--c:#e05252">
+      <div class="card-lbl">Daily Expenses</div>
+      <div class="card-val" id="cExp">KES 0</div>
+      <div class="card-unit">Operating Costs</div>
+      <div class="card-sub" id="cExpSub">—</div>
+    </div>
+    <div class="card priv" id="profCard" style="--c:#b57bee">
+      <div class="card-lbl">Net Profit</div>
+      <div class="card-val" id="cProfit">KES 0</div>
+      <div class="card-unit">Daily Net</div>
+      <div class="card-sub" id="cMarginSub">Margin: 0%</div>
+    </div>
+    <div class="card" style="--c:#f5c518">
+      <div class="card-lbl">KRA Tax Payable</div>
+      <div class="card-val" id="cTax">KES 0</div>
+      <div class="card-unit">VAT + Excise</div>
+      <div class="card-sub" id="cTaxSub">—</div>
+    </div>
+    <div class="card" style="--c:#5bb8e0">
+      <div class="card-lbl">Revenue / Litre</div>
+      <div class="card-val" id="cRevPerL">KES 0</div>
+      <div class="card-unit">Efficiency</div>
+      <div class="card-sub priv" id="cProfPerL">Profit/L: KES 0</div>
+    </div>
+  </div>
+
+  <hr class="sep home-only">
+
+  <!-- ══ TABS ══ -->
+  <div class="workspace">
+  <div class="tabs" id="tabBar" aria-label="Sections">
+    <button class="tab-btn" onclick="tab('fuel',this)"><span class="tab-name">⛽ Fuel Entry</span><span class="tab-desc">Pump meter readings, prices and litres sold</span></button>
+    <button class="tab-btn" onclick="tab('pay',this)"><span class="tab-name">💳 Payments</span><span class="tab-desc">M-Pesa, cash, card and credit collected</span></button>
+    <button class="tab-btn" onclick="tab('gas',this)"><span class="tab-name">🛢️ Gases & Lubricants</span><span class="tab-desc">LPG cylinders, oils and other items sold</span></button>
+    <button class="tab-btn" onclick="tab('dips',this)"><span class="tab-name">📏 Dips</span><span class="tab-desc">Tank stock check against pump sales</span></button>
+    <button class="tab-btn" onclick="tab('exp',this)"><span class="tab-name">📋 Expenses</span><span class="tab-desc">Daily costs and credit customer invoices</span></button>
+    <button class="tab-btn" onclick="tab('kra',this)"><span class="tab-name">🇰🇪 KRA Filing</span><span class="tab-desc">VAT, excise and road levy for the day</span></button>
+    <button class="tab-btn" onclick="tab('prices',this)"><span class="tab-name">💲 Fuel Prices</span><span class="tab-desc">Selling and cost prices set by the owner</span></button>
+    <button class="tab-btn" onclick="tab('credit',this)"><span class="tab-name">🧾 Credit Accounts</span><span class="tab-desc">Customer balances, payments and statements</span></button>
+    <button class="tab-btn" onclick="tab('report',this)"><span class="tab-name">📈 Monthly Report</span><span class="tab-desc">Month totals per branch, side by side</span></button>
+    <button class="tab-btn" onclick="tab('ana',this)"><span class="tab-name">📊 Analytics</span><span class="tab-desc">Last 7 days and all-time totals</span></button>
+    <button class="tab-btn" onclick="tab('rec',this)"><span class="tab-name">🗂️ Records</span><span class="tab-desc">Saved days for every branch</span></button>
+  </div>
+
+  <div class="panels">
+    <div class="page-bar">
+      <button class="btn btn-o back-btn" onclick="goHome()" aria-label="Back to menu">‹ Back</button>
+      <div style="min-width:0">
+        <div class="page-title" id="pageTitle">—</div>
+        <div class="page-ctx" id="pageCtx">—</div>
+      </div>
+      <button class="btn btn-g page-save" data-save-btn onclick="saveRec()">💾 Save</button>
+    </div>
+    <div class="lock-banner" id="lockBanner" hidden></div>
+  <!-- ══ PANEL: FUEL ══ -->
+  <div class="panel" id="p-fuel">
+    <div class="info-note" id="openingNote" hidden></div>
+    <div class="warn-note" id="openingWarn" hidden></div>
+    <div class="g2">
+      <!-- PETROL -->
+      <div class="box">
+        <div class="box-title">
+          <div class="fuel-dot" style="background:#f5a623"></div>
+          Super Petrol (PMS)
+          <div class="price-tag">KES <span id="pPriceTag">0</span>/L</div>
+        </div>
+        <div class="pumps" data-fuel="petrol"></div>
+        <div class="fuel-row">
+          <div class="ig"><label>Selling Price /L (KES)</label>
+            <input type="number" id="pPrice" placeholder="189.50" step="0.01" oninput="calc()"></div>
+          <div class="ig priv"><label>Cost Price /L (KES)</label>
+            <input type="number" id="pCost" placeholder="174.00" step="0.01" oninput="calc()"></div>
+        </div>
+        <div class="fuel-total">
+          <span>Litres: <b id="pLit">0.00 L</b></span>
+          <span>Revenue: <b id="pRev">KES 0</b></span>
+          <span class="priv">Margin: <b id="pMgn">KES 0</b></span>
+        </div>
+        <div class="fuel-total" id="pPumpCheckRow" style="display:none">
+          <span>Pump Sales Total: <b id="pPumpSales">KES 0</b></span>
+          <span><span id="pPumpVarianceLabel">Variance: </span><b id="pPumpVariance">KES 0</b></span>
+        </div>
+      </div>
+      <!-- DIESEL -->
+      <div class="box">
+        <div class="box-title">
+          <div class="fuel-dot" style="background:#5bb8e0"></div>
+          Diesel (AGO)
+          <div class="price-tag">KES <span id="dPriceTag">0</span>/L</div>
+        </div>
+        <div class="pumps" data-fuel="diesel"></div>
+        <div class="fuel-row">
+          <div class="ig"><label>Selling Price /L (KES)</label>
+            <input type="number" id="dPrice" placeholder="172.00" step="0.01" oninput="calc()"></div>
+          <div class="ig priv"><label>Cost Price /L (KES)</label>
+            <input type="number" id="dCost" placeholder="157.00" step="0.01" oninput="calc()"></div>
+        </div>
+        <div class="fuel-total">
+          <span>Litres: <b id="dLit">0.00 L</b></span>
+          <span>Revenue: <b id="dRev">KES 0</b></span>
+          <span class="priv">Margin: <b id="dMgn">KES 0</b></span>
+        </div>
+        <div class="fuel-total" id="dPumpCheckRow" style="display:none">
+          <span>Pump Sales Total: <b id="dPumpSales">KES 0</b></span>
+          <span><span id="dPumpVarianceLabel">Variance: </span><b id="dPumpVariance">KES 0</b></span>
+        </div>
+      </div>
+      <!-- KEROSENE -->
+      <div class="box">
+        <div class="box-title">
+          <div class="fuel-dot" style="background:#b57bee"></div>
+          Kerosene (IK)
+          <div class="price-tag">KES <span id="kPriceTag">0</span>/L</div>
+        </div>
+        <div class="pumps" data-fuel="kero"></div>
+        <div class="fuel-row">
+          <div class="ig"><label>Selling Price /L (KES)</label>
+            <input type="number" id="kPrice" placeholder="152.00" step="0.01" oninput="calc()"></div>
+          <div class="ig priv"><label>Cost Price /L (KES)</label>
+            <input type="number" id="kCost" placeholder="138.00" step="0.01" oninput="calc()"></div>
+        </div>
+        <div class="fuel-total">
+          <span>Litres: <b id="kLit">0.00 L</b></span>
+          <span>Revenue: <b id="kRev">KES 0</b></span>
+          <span class="priv">Margin: <b id="kMgn">KES 0</b></span>
+        </div>
+        <div class="fuel-total" id="kPumpCheckRow" style="display:none">
+          <span>Pump Sales Total: <b id="kPumpSales">KES 0</b></span>
+          <span><span id="kPumpVarianceLabel">Variance: </span><b id="kPumpVariance">KES 0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFIT BOX -->
+    <div class="pbox pbox-4">
+      <div class="pbox-item">
+        <div class="pl">Total Sales</div>
+        <div class="pv" id="pvRev" style="color:var(--acc);font-size:1.5rem">KES 0</div>
+        <div class="pm">Fuel + Gas/Lube revenue</div>
+      </div>
+      <div class="pbox-item priv">
+        <div class="pl">Fuel Cost</div>
+        <div class="pv" id="pvFuelCost" style="color:var(--red);font-size:1.5rem">− KES 0</div>
+        <div class="pm">Cost of fuel sold</div>
+      </div>
+      <div class="pbox-item">
+        <div class="pl">Expenses</div>
+        <div class="pv" id="pvExpenses" style="color:var(--red);font-size:1.5rem">− KES 0</div>
+        <div class="pm">Subtracted from sales</div>
+      </div>
+      <div class="pbox-item priv">
+        <div class="pl">Net Profit</div>
+        <div class="pv" id="pvProfit" style="color:var(--acc)">KES 0</div>
+        <div class="pm" id="pvMargin">Margin: 0%</div>
+      </div>
+    </div>
+    <div class="priv" style="font-family:var(--mono);font-size:.72rem;color:var(--mut);text-align:center;margin-top:8px">
+      Total Sales − Fuel Cost − Expenses = Net Profit
+    </div>
+    <div class="var-bar ok" id="varBar">✅ Variance: KES 0.00 — Balanced</div>
+  </div>
+
+  <!-- ══ PANEL: PAYMENTS ══ -->
+  <div class="panel" id="p-pay">
+    <div class="g2" style="margin-bottom:16px">
+      <div class="box">
+        <div class="box-title">📱 M-Pesa
+          <span style="margin-left:auto;font-family:var(--mono);font-size:.65rem;background:rgba(0,166,81,.12);color:#00a651;border:1px solid rgba(0,166,81,.25);padding:2px 8px;border-radius:4px">SAFARICOM</span>
+        </div>
+        <div class="g2" style="gap:10px">
+          <div class="ig"><label>Amount Received (KES)</label>
+            <input type="number" id="fMpesa" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>No. of Transactions</label>
+            <input type="number" id="fMpesaTxn" placeholder="0" oninput="calc()"></div>
+          <div class="ig"><label>Till / Paybill No.</label>
+            <input type="text" id="fMpesaTill" placeholder="e.g. 5XXXXXX"></div>
+          <div class="ig"><label>M-Pesa Ref (last txn)</label>
+            <input type="text" id="fMpesaRef" placeholder="e.g. RGK7ABC123"></div>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box-title">💵 Cash at Hand</div>
+        <div class="g2" style="gap:10px">
+          <div class="ig"><label>Cash Collected (KES)</label>
+            <input type="number" id="fCash" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Opening Float (KES)</label>
+            <input type="number" id="fFloat" placeholder="e.g. 5000" oninput="calc()"></div>
+          <div class="ig"><label>Cash Banked Today (KES)</label>
+            <input type="number" id="fBanked" placeholder="0.00" oninput="calc()"></div>
+          <div class="ig"><label>Balance in Till (auto)</label>
+            <input type="number" id="fTillBal" readonly placeholder="0.00"></div>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box-title">🧾 Credit / Card / Other</div>
+        <div class="g2" style="gap:10px">
+          <div class="ig"><label>Credit Sales (KES)</label>
+            <input type="number" id="fCredit" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Card / POS Payments (KES)</label>
+            <input type="number" id="fCard" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig" style="grid-column:1/-1"><label>Account / Customer Name</label>
+            <input type="text" id="fCreditCust" placeholder="e.g. Nairobi Bus Services Ltd"></div>
+        </div>
+      </div>
+    </div>
+    <div class="box" style="margin-bottom:16px">
+      <div class="box-title">👷 Cash per Attendant
+        <span style="margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--mut)">Sales from their pumps vs. money handed in</span>
+      </div>
+      <div id="attendantsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div class="g4">
+        <div class="ig"><label for="atName">Attendant</label>
+          <input type="text" id="atName" list="atNames" placeholder="e.g. Brian Otieno" autocomplete="off">
+          <datalist id="atNames"></datalist></div>
+        <div class="ig"><label for="atExpected">Sales on Their Pumps (KES)</label><input type="number" id="atExpected" step="0.01" placeholder="0.00"></div>
+        <div class="ig"><label for="atCash">Cash Handed In (KES)</label><input type="number" id="atCash" step="0.01" placeholder="0.00"></div>
+        <div class="ig"><label for="atMpesa">M-Pesa to Till (KES)</label><input type="number" id="atMpesa" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="actions" style="margin-top:12px"><button class="btn btn-g" onclick="addAttendant()">＋ Add Attendant</button></div>
+      <div class="fuel-total" style="margin-top:12px">
+        <span>Attendants: <b id="atCount">0</b></span>
+        <span>Total short: <b id="atShort" class="bad">KES 0</b></span>
+        <span>Total over: <b id="atOver">KES 0</b></span>
+      </div>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--brd);border-radius:9px;padding:14px 18px;font-family:var(--mono);font-size:.78rem;display:flex;gap:24px;flex-wrap:wrap">
+      <span>M-Pesa: <b id="pMpesaPct" style="color:#00a651">0%</b></span>
+      <span>Cash: <b id="pCashPct" style="color:var(--acc2)">0%</b></span>
+      <span>Credit+Card: <b id="pOtherPct" style="color:var(--purple)">0%</b></span>
+      <span style="margin-left:auto">Total Collected: <b id="pCollected" style="color:var(--acc)">KES 0</b></span>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: GASES & LUBRICANTS ══ -->
+  <div class="panel" id="p-gas">
+    <div class="box" style="margin-bottom:16px">
+      <div class="box-title">
+        🛢️ Gases & Lubricants — Itemised Sales
+        <span style="margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--mut)">
+          LPG cylinders, engine oil, grease, coolant, etc.
+        </span>
+      </div>
+      <div id="gasItemsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap">
+        <div class="ig" style="flex:2;min-width:160px">
+          <label>Product Name</label>
+          <input type="text" id="gasItemName" placeholder="e.g. 6kg LPG Cylinder, Engine Oil 5L">
+        </div>
+        <div class="ig" style="flex:1;min-width:90px">
+          <label>Category</label>
+          <select id="gasItemCategory">
+            <option value="Gas">Gas / LPG</option>
+            <option value="Lubricant">Lubricant / Oil</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="ig" style="flex:1;min-width:80px">
+          <label>Quantity</label>
+          <input type="number" id="gasItemQty" placeholder="1" step="1" min="1" value="1">
+        </div>
+        <div class="ig" style="flex:1;min-width:110px">
+          <label>Unit Price (KES)</label>
+          <input type="number" id="gasItemPrice" placeholder="0.00" step="0.01"
+            onkeydown="if(event.key==='Enter')addGasItem()">
+        </div>
+        <button class="btn btn-g" onclick="addGasItem()" style="white-space:nowrap">＋ Add Item</button>
+      </div>
+      <div class="fuel-total" style="margin-top:12px">
+        <span>Items: <b id="gasItemCount">0</b></span>
+        <span>Gas Sales: <b id="gasCategoryTotal" style="color:var(--acc2)">KES 0</b></span>
+        <span>Lubricant Sales: <b id="lubeCategoryTotal" style="color:var(--blue)">KES 0</b></span>
+        <span>Total Revenue: <b id="gasItemsTotal" style="color:var(--acc)">KES 0</b></span>
+      </div>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--brd);border-radius:9px;padding:14px 18px;font-family:var(--mono);font-size:.78rem;display:flex;gap:24px;flex-wrap:wrap">
+      <span>This total is automatically added to Gross Revenue and Net Profit.</span>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: DIPS (Tank Stock Reconciliation) ══ -->
+  <div class="panel" id="p-dips">
+    <div class="box" style="margin-bottom:14px">
+      <div class="box-title">
+        📏 Tank Dip Reconciliation
+        <span style="margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--mut)">
+          Physical stock check vs. pump meter sales
+        </span>
+      </div>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--mut);margin-bottom:4px">
+        Expected Stock = Opening Dip + Deliveries Received − Litres Sold (from pump meters)
+      </div>
+    </div>
+
+    <div class="g2">
+      <!-- PETROL DIP -->
+      <div class="box">
+        <div class="box-title">
+          <div class="fuel-dot" style="background:#f5a623"></div>
+          Petrol Tank Dip
+        </div>
+        <div class="fuel-row">
+          <div class="ig"><label>Opening Dip (L)</label>
+            <input type="number" id="pDipOpen" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Deliveries Received (L)</label>
+            <input type="number" id="pDelivered" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Closing Dip (L)</label>
+            <input type="number" id="pDipClose" placeholder="0.00" step="0.01" oninput="calc()"></div>
+        </div>
+        <div class="fuel-total">
+          <span>Litres Sold (Pump): <b id="pDipSold">0.00 L</b></span>
+          <span>Expected Stock: <b id="pDipExpected">0.00 L</b></span>
+        </div>
+        <div class="fuel-total" id="pDipVarianceRow">
+          <span><span id="pDipVarianceLabel">Variance: </span><b id="pDipVariance">0.00 L</b></span>
+        </div>
+      </div>
+
+      <!-- DIESEL DIP -->
+      <div class="box">
+        <div class="box-title">
+          <div class="fuel-dot" style="background:#5bb8e0"></div>
+          Diesel Tank Dip
+        </div>
+        <div class="fuel-row">
+          <div class="ig"><label>Opening Dip (L)</label>
+            <input type="number" id="dDipOpen" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Deliveries Received (L)</label>
+            <input type="number" id="dDelivered" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Closing Dip (L)</label>
+            <input type="number" id="dDipClose" placeholder="0.00" step="0.01" oninput="calc()"></div>
+        </div>
+        <div class="fuel-total">
+          <span>Litres Sold (Pump): <b id="dDipSold">0.00 L</b></span>
+          <span>Expected Stock: <b id="dDipExpected">0.00 L</b></span>
+        </div>
+        <div class="fuel-total" id="dDipVarianceRow">
+          <span><span id="dDipVarianceLabel">Variance: </span><b id="dDipVariance">0.00 L</b></span>
+        </div>
+      </div>
+
+      <!-- KEROSENE DIP -->
+      <div class="box">
+        <div class="box-title">
+          <div class="fuel-dot" style="background:#b57bee"></div>
+          Kerosene Tank Dip
+        </div>
+        <div class="fuel-row">
+          <div class="ig"><label>Opening Dip (L)</label>
+            <input type="number" id="kDipOpen" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Deliveries Received (L)</label>
+            <input type="number" id="kDelivered" placeholder="0.00" step="0.01" oninput="calc()"></div>
+          <div class="ig"><label>Closing Dip (L)</label>
+            <input type="number" id="kDipClose" placeholder="0.00" step="0.01" oninput="calc()"></div>
+        </div>
+        <div class="fuel-total">
+          <span>Litres Sold (Pump): <b id="kDipSold">0.00 L</b></span>
+          <span>Expected Stock: <b id="kDipExpected">0.00 L</b></span>
+        </div>
+        <div class="fuel-total" id="kDipVarianceRow">
+          <span><span id="kDipVarianceLabel">Variance: </span><b id="kDipVariance">0.00 L</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="box" style="margin-top:14px">
+      <div class="box-title">🚚 Fuel Deliveries
+        <span style="margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--mut)">
+          Received litres fill the Deliveries boxes above</span>
+      </div>
+      <div id="deliveriesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div class="g4">
+        <div class="ig"><label for="dvFuel">Fuel</label>
+          <select id="dvFuel"><option value="petrol">Petrol (PMS)</option><option value="diesel">Diesel (AGO)</option><option value="kero">Kerosene (IK)</option></select></div>
+        <div class="ig"><label for="dvSupplier">Supplier</label><input type="text" id="dvSupplier" placeholder="e.g. Vivo Energy"></div>
+        <div class="ig"><label for="dvNote">Delivery Note No.</label><input type="text" id="dvNote" placeholder="e.g. DN-20431"></div>
+        <div class="ig"><label for="dvTruck">Truck Reg.</label><input type="text" id="dvTruck" placeholder="e.g. KCB 456T" style="text-transform:uppercase"></div>
+        <div class="ig"><label for="dvOrdered">Litres Ordered</label><input type="number" id="dvOrdered" placeholder="0" step="0.01"></div>
+        <div class="ig"><label for="dvReceived">Litres Received</label><input type="number" id="dvReceived" placeholder="0" step="0.01"></div>
+        <div class="ig"><label for="dvDipBefore">Dip Before (L)</label><input type="number" id="dvDipBefore" placeholder="optional" step="0.01"></div>
+        <div class="ig"><label for="dvDipAfter">Dip After (L)</label><input type="number" id="dvDipAfter" placeholder="optional" step="0.01"></div>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn btn-g" onclick="addDelivery()">＋ Add Delivery</button>
+      </div>
+    </div>
+
+    <div class="kra-note" id="varianceNote" style="margin-top:14px">
+      ⚠️ <b>HOW TO READ VARIANCE:</b> &nbsp; A <b>negative</b> variance means the tank has
+      <b>less fuel than expected</b> (possible leak, theft, or meter under-reading — investigate).
+      A <b>positive</b> variance means <b>more fuel than expected</b> (possible meter over-reading
+      or measurement error). Small variances (under ±10L) are normal evaporation/measurement tolerance.
+    </div>
+  </div>
+
+  <!-- ══ PANEL: EXPENSES ══ -->
+  <div class="panel" id="p-exp">
+    <div class="g4" style="margin-bottom:14px">
+      <div class="ig"><label>Staff Wages (KES)</label>
+        <input type="number" id="eWages" placeholder="0.00" oninput="calc()"></div>
+      <div class="ig"><label>Electricity / Generator (KES)</label>
+        <input type="number" id="eElec" placeholder="0.00" oninput="calc()"></div>
+      <div class="ig"><label>Water (KES)</label>
+        <input type="number" id="eWater" placeholder="0.00" oninput="calc()"></div>
+      <div class="ig"><label>Maintenance / Equipment (KES)</label>
+        <input type="number" id="eMaint" placeholder="0.00" oninput="calc()"></div>
+      <div class="ig"><label>Lubricants / Oil Stock (KES)</label>
+        <input type="number" id="eLubes" placeholder="0.00" oninput="calc()"></div>
+      <div class="ig">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleMiscPanel()">
+          Miscellaneous (KES)
+          <span id="miscToggleIcon" style="color:var(--acc);font-size:.9rem">▸</span>
+        </label>
+        <input type="number" id="eMisc" placeholder="0.00" readonly
+          style="cursor:pointer" onclick="toggleMiscPanel()">
+      </div>
+    </div>
+
+    <!-- Miscellaneous line-item breakdown -->
+    <div class="box" id="miscPanel" style="display:none;margin-bottom:14px">
+      <div class="box-title">
+        🧾 Miscellaneous — Itemised
+        <span style="margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--mut)">
+          Click "＋ Add Item" for each thing you spent on
+        </span>
+      </div>
+      <div id="miscItemsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap">
+        <div class="ig" style="flex:2;min-width:160px">
+          <label>Item Name</label>
+          <input type="text" id="miscItemName" placeholder="e.g. Toilet paper, tip, repairs">
+        </div>
+        <div class="ig" style="flex:1;min-width:110px">
+          <label>Amount (KES)</label>
+          <input type="number" id="miscItemAmount" placeholder="0.00" step="0.01"
+            onkeydown="if(event.key==='Enter')addMiscItem()">
+        </div>
+        <button class="btn btn-g" onclick="addMiscItem()" style="white-space:nowrap">＋ Add Item</button>
+      </div>
+      <div class="fuel-total" style="margin-top:12px">
+        <span>Items: <b id="miscItemCount">0</b></span>
+        <span>Miscellaneous Total: <b id="miscItemsTotal" style="color:var(--acc2)">KES 0</b></span>
+      </div>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--brd);border-radius:9px;padding:14px 18px;font-family:var(--mono);font-size:.78rem;display:flex;gap:24px;flex-wrap:wrap">
+      <span>Total Expenses: <b id="eTotalDisp" style="color:var(--red)">KES 0</b></span>
+      <span>Revenue/L: <b id="eRevPerL" style="color:var(--acc2)">KES 0</b></span>
+      <span class="priv">Profit/L: <b id="eProfPerL" style="color:var(--acc)">KES 0</b></span>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--brd);border-radius:9px;padding:14px 18px;margin-top:10px;font-family:var(--mono);font-size:.78rem;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+      <span>Total Sales: <b id="eSalesRef" style="color:var(--acc2)">KES 0</b></span>
+      <span style="color:var(--mut)">−</span>
+      <span>Expenses: <b id="eExpRef" style="color:var(--red)">KES 0</b></span>
+      <span style="color:var(--mut)">=</span>
+      <span>Sales After Expenses: <b id="eSalesAfterExp" style="color:var(--acc)">KES 0</b></span>
+    </div>
+
+    <div class="box" style="margin-top:14px">
+      <div class="box-title">📷 Receipt Photos
+        <span style="margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--mut)">Receipts and delivery notes for this day</span>
+      </div>
+      <div id="receiptsList" class="receipt-grid"></div>
+      <div class="g4">
+        <div class="ig"><label for="rcLabel">What is it for?</label>
+          <select id="rcLabel">
+            <option>Wages</option><option>Electricity / Generator</option><option>Water</option>
+            <option>Maintenance / Equipment</option><option>Lubricants / Oil Stock</option>
+            <option>Miscellaneous</option><option>Delivery note</option><option>Other</option>
+          </select></div>
+        <div class="ig"><label for="rcAmount">Amount (KES, optional)</label><input type="number" id="rcAmount" step="0.01"></div>
+        <div class="ig" style="grid-column:span 2"><label for="rcFile">Photo</label>
+          <input type="file" id="rcFile" accept="image/*" capture="environment"></div>
+      </div>
+      <div class="actions"><button class="btn btn-g" id="rcBtn" onclick="addReceipt()">📷 Add Photo</button></div>
+    </div>
+
+    <hr class="sep">
+
+    <!-- ═══ CREDIT / INVOICE CUSTOMERS ═══ -->
+    <div class="stag">Credit Customers — Invoiced Fuel Sales</div>
+    <div class="box">
+      <div class="box-title">🧾 New Invoice Entry</div>
+      <div class="g3" style="margin-bottom:10px">
+        <div class="ig"><label for="invAccount">Credit Account</label>
+          <select id="invAccount" onchange="pickInvoiceAccount()"><option value="">— No account (one-off) —</option></select></div>
+        <div class="ig"><label>Customer Name</label>
+          <input type="text" id="invCustomer" placeholder="e.g. John Mwangi"></div>
+        <div class="ig"><label>Company Name</label>
+          <input type="text" id="invCompany" placeholder="e.g. Nairobi Bus Services Ltd"></div>
+        <div class="ig"><label>Car Registration No.</label>
+          <input type="text" id="invCarReg" placeholder="e.g. KDA 123X" style="text-transform:uppercase"></div>
+        <div class="ig"><label>Phone Number</label>
+          <input type="text" id="invPhone" placeholder="e.g. 0722 123 456"></div>
+        <div class="ig"><label>Fuel Type</label>
+          <select id="invFuelType">
+            <option value="Petrol">Super Petrol (PMS)</option>
+            <option value="Diesel">Diesel (AGO)</option>
+            <option value="Kerosene">Kerosene (IK)</option>
+          </select></div>
+        <div class="ig"><label>Amount (KES)</label>
+          <input type="number" id="invAmount" placeholder="0.00" step="0.01"></div>
+      </div>
+      <div class="actions" style="margin-top:0">
+        <button class="btn btn-g" onclick="addInvoice()">➕ Add Invoice</button>
+        <span id="invAccountNote" class="m-sub" style="margin:0;align-self:center"></span>
+      </div>
+    </div>
+
+    <div class="tbl-wrap" style="margin-top:14px">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Customer</th><th>Company</th><th>Car Reg No.</th>
+          <th>Phone</th><th>Fuel</th><th>Amount</th><th>Print</th><th>Del</th>
+        </tr></thead>
+        <tbody id="invoiceBody">
+          <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--mut);font-family:var(--mono);font-size:.74rem">
+            No invoices added yet — fill the form above.
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--brd);border-radius:9px;padding:14px 18px;font-family:var(--mono);font-size:.78rem;display:flex;gap:24px;flex-wrap:wrap;margin-top:10px">
+      <span>Invoices Today: <b id="invCount" style="color:var(--blue)">0</b></span>
+      <span>Total Invoiced: <b id="invTotalDisp" style="color:var(--purple)">KES 0</b></span>
+      <span style="color:var(--mut)">↳ Auto-added to Credit Sales in Payments tab</span>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: KRA ══ -->
+  <div class="panel" id="p-kra">
+    <div class="kra-wrap">
+      <div class="kra-head">
+        <div class="kra-seal">🇰🇪</div>
+        <div>
+          <div class="kra-ttl">Kenya Revenue Authority — iTax</div>
+          <div class="kra-sub">Petroleum Station Daily Sales Declaration · VAT & Excise Duty Filing</div>
+        </div>
+      </div>
+      <div class="kra-body">
+        <div class="g3">
+          <div class="ig"><label>Taxpayer PIN</label>
+            <input type="text" id="kPin" placeholder="e.g. A001234567B" style="text-transform:uppercase"></div>
+          <div class="ig"><label>Business Registered Name</label>
+            <input type="text" id="kBiz" placeholder="Registered Business Name"></div>
+          <div class="ig"><label>Tax Period (Month/Year)</label>
+            <input type="text" id="kPeriod" placeholder="e.g. June 2026"></div>
+          <div class="ig"><label>Station / Branch</label>
+            <input type="text" id="kBranch" placeholder="e.g. Ngeria"></div>
+          <div class="ig"><label>ETR / ESD Machine No.</label>
+            <input type="text" id="kEtr" placeholder="e.g. ETR-12345"></div>
+          <div class="ig"><label>Return Type</label>
+            <select id="kReturnType">
+              <option value="vat">VAT Return (Monthly)</option>
+              <option value="excise">Excise Duty (Petroleum)</option>
+              <option value="paye">PAYE (Employee Payroll)</option>
+              <option value="withholding">Withholding Tax</option>
+            </select></div>
+        </div>
+
+        <!-- AUTO COMPUTED -->
+        <div class="kra-computed">
+          <div class="kcc-title">Auto-Computed Tax Figures</div>
+          <div class="kcc-grid">
+            <div class="kcc-item"><div class="lbl">TAXABLE SALES (Ex-VAT)</div><div class="val" id="kExVat">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">OUTPUT VAT @ 16%</div><div class="val" id="kVat">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">TOTAL INCL. VAT</div><div class="val" id="kInclVat">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">EXCISE — PETROL @ KES 21.95/L</div><div class="val" id="kExcP">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">EXCISE — DIESEL @ KES 7.21/L</div><div class="val" id="kExcD">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">EXCISE — KEROSENE @ KES 7.19/L</div><div class="val" id="kExcK">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">ROAD LEVY — PETROL @ KES 18/L</div><div class="val" id="kRLP">KES 0.00</div></div>
+            <div class="kcc-item"><div class="lbl">ROAD LEVY — DIESEL @ KES 13.19/L</div><div class="val" id="kRLD">KES 0.00</div></div>
+            <div class="kcc-item big"><div class="lbl" style="color:var(--acc2)">TOTAL VAT + EXCISE PAYABLE</div><div class="val" id="kTotalTax">KES 0.00</div></div>
+          </div>
+        </div>
+
+        <div class="ig" style="margin-top:16px">
+          <label>Remarks / Adjustments / Exemptions / Credits</label>
+          <textarea id="kRemarks" placeholder="Enter any tax adjustments, credit notes, exemptions, or notes for this period…"></textarea>
+        </div>
+
+        <div class="kra-note">
+          ⚠️ <b>STATUTORY RATES (Kenya 2024/25):</b> &nbsp;VAT 16% &nbsp;|&nbsp;
+          Excise Petrol KES 21.95/L &nbsp;|&nbsp; Excise Diesel KES 7.21/L &nbsp;|&nbsp;
+          Excise Kerosene KES 7.19/L &nbsp;|&nbsp; Road Levy Petrol KES 18.00/L &nbsp;|&nbsp;
+          Road Levy Diesel KES 13.19/L.
+          All prices are VAT-inclusive. ETR/ESD receipt required per transaction.
+          Verify at <b>itax.kra.go.ke</b> before filing.
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-y" onclick="openKra()">📋 Preview & File KRA Return</button>
+          <button class="btn btn-g" data-save-btn onclick="saveRec()">💾 Save Daily Record</button>
+          <button class="btn btn-b" id="approveDayBtn" onclick="approveCurrentDay()" hidden>✅ Approve Day</button>
+          <button class="btn btn-o" onclick="window.print()">🖨️ Print Report</button>
+          <button class="btn btn-b" onclick="exportCSV()">📥 Export CSV</button>
+          <button class="btn btn-r" onclick="clearAll()">🗑️ Clear Form</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: FUEL PRICES ══ -->
+  <div class="panel" id="p-prices">
+    <div class="box" style="margin-bottom:14px">
+      <div class="box-title">💲 Prices in force <span class="price-tag" id="pricesFor">—</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Fuel</th><th>Selling /L</th><th class="priv">Cost /L</th><th>Since</th><th>Set by</th></tr></thead>
+        <tbody id="pricesNow"></tbody>
+      </table></div>
+      <div class="m-sub" style="margin:10px 0 0">Prices set here fill in automatically on the Fuel Entry page and can't be typed over.
+        Fuels with no price set can still be typed in.</div>
+    </div>
+
+    <div class="box" id="priceAdmin" hidden style="margin-bottom:14px">
+      <div class="box-title">Set New Prices (admin)</div>
+      <div class="ig" style="margin-bottom:12px"><label>Branches</label>
+        <div class="chk-grid">
+            <label class="chk"><input type="checkbox" id="priceAll" onchange="toggleAllPriceStations(this.checked)"> <b>All branches</b></label>
+            <span id="priceStations" style="display:contents"></span>
+        </div>
+      </div>
+      <div class="g4">
+        <div class="ig"><label for="priceFrom">Effective From</label><input type="date" id="priceFrom"></div>
+        <div class="ig"><label for="prPetrolSell">Petrol Selling /L</label><input type="number" id="prPetrolSell" step="0.01" placeholder="e.g. 189.50"></div>
+        <div class="ig"><label for="prPetrolCost">Petrol Cost /L</label><input type="number" id="prPetrolCost" step="0.01" placeholder="e.g. 174.00"></div>
+        <div class="ig"><label for="prDieselSell">Diesel Selling /L</label><input type="number" id="prDieselSell" step="0.01" placeholder="e.g. 172.00"></div>
+        <div class="ig"><label for="prDieselCost">Diesel Cost /L</label><input type="number" id="prDieselCost" step="0.01" placeholder="e.g. 157.00"></div>
+        <div class="ig"><label for="prKeroSell">Kerosene Selling /L</label><input type="number" id="prKeroSell" step="0.01" placeholder="e.g. 152.00"></div>
+        <div class="ig"><label for="prKeroCost">Kerosene Cost /L</label><input type="number" id="prKeroCost" step="0.01" placeholder="e.g. 138.00"></div>
+      </div>
+      <div class="m-sub" style="margin:10px 0 0">Leave a fuel blank to keep its current price. EPRA reviews prices on the 14th of each month, effective the 15th.</div>
+      <div class="actions"><button class="btn btn-g" onclick="savePrices()">💾 Save Prices</button></div>
+    </div>
+
+    <div class="box" id="priceHistoryBox" hidden>
+      <div class="box-title">Price History</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>From</th><th>Branch</th><th>Fuel</th><th>Selling</th><th>Cost</th><th>Set by</th></tr></thead>
+        <tbody id="priceHistory"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: CREDIT ACCOUNTS ══ -->
+  <div class="panel" id="p-credit">
+    <div class="box" style="margin-bottom:14px">
+      <div class="box-title">🧾 Credit Accounts <span class="price-tag" id="creditTotals">—</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Balance</th><th>Limit</th><th></th></tr></thead>
+        <tbody id="customersBody"></tbody>
+      </table></div>
+    </div>
+    <div class="box">
+      <div class="box-title">➕ New Credit Account</div>
+      <div class="g4">
+        <div class="ig"><label for="ncName">Customer Name</label><input type="text" id="ncName" placeholder="e.g. Peter Otieno"></div>
+        <div class="ig"><label for="ncCompany">Company</label><input type="text" id="ncCompany" placeholder="e.g. Matatu Sacco Ltd"></div>
+        <div class="ig"><label for="ncPhone">Phone</label><input type="text" id="ncPhone" placeholder="e.g. 0722 000 000"></div>
+        <div class="ig"><label for="ncLimit">Credit Limit (KES)</label><input type="number" id="ncLimit" step="100" placeholder="managers & admins set this"></div>
+      </div>
+      <div class="actions"><button class="btn btn-g" onclick="addCustomer()">➕ Add Account</button></div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: MONTHLY REPORT ══ -->
+  <div class="panel" id="p-report">
+    <div class="box report-controls" style="margin-bottom:14px">
+      <div class="ig" style="max-width:200px"><label for="repMonth">Month</label>
+        <input type="month" id="repMonth" onchange="renderReport()"></div>
+      <div class="actions" style="margin-top:0">
+        <button class="btn btn-o" onclick="window.print()">🖨️ Print / PDF</button>
+        <button class="btn btn-b" onclick="downloadReportCSV()">📥 Download for Excel</button>
+      </div>
+    </div>
+    <div class="cards" id="repCards"></div>
+    <div class="box" style="margin-bottom:14px">
+      <div class="box-title">Branches Side by Side</div>
+      <div class="tbl-wrap"><table class="report-table">
+        <thead id="repHead"></thead><tbody id="repBody"></tbody>
+      </table></div>
+    </div>
+    <div class="box">
+      <div class="box-title">Day by Day</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Branch</th><th>Litres</th><th>Sales</th><th class="priv">Profit</th><th>Status</th></tr></thead>
+        <tbody id="repDaily"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: ANALYTICS ══ -->
+  <div class="panel" id="p-ana">
+    <div class="g2">
+      <div class="box">
+        <div class="stag">Revenue — Last 7 Days</div>
+        <div class="chart-bars" id="chartRev"></div>
+      </div>
+      <div class="box priv">
+        <div class="stag">Net Profit — Last 7 Days</div>
+        <div class="chart-bars" id="chartProfit"></div>
+      </div>
+      <div class="box">
+        <div class="stag">Litres Sold — Last 7 Days</div>
+        <div class="chart-bars" id="chartLit"></div>
+      </div>
+      <div class="box">
+        <div class="stag">All-Time Totals</div>
+        <div id="allTime"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL: RECORDS ══ -->
+  <div class="panel" id="p-rec">
+    <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-b" onclick="refreshRecs()">🔄 Refresh</button>
+      <button class="btn btn-o" onclick="exportCSV()">📥 Export CSV</button>
+      <button class="btn" id="filterStationBtn" style="background:rgba(91,184,224,.1);border:1px solid rgba(91,184,224,.3);color:var(--blue)" onclick="toggleStationFilter()">🔽 Filter Branch</button>
+      <select id="filterStation" style="display:none;background:var(--s2);border:1px solid var(--brd);color:var(--txt);font-family:var(--mono);font-size:.78rem;padding:7px 11px;border-radius:7px;outline:none" onchange="loadRecs()">
+        <option value="">All Branches</option>
+      </select>
+      <span id="recCount" style="font-family:var(--mono);font-size:.72rem;color:var(--mut);margin-left:auto"></span>
+      <button class="btn btn-o" id="binBtn" onclick="openBin()" style="margin-left:4px">🗑️ Bin</button>
+      <button class="btn btn-r" id="eraseAllBtn" onclick="eraseAllRecs()">Move All to Bin</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Date</th><th>Station</th><th>Operator</th>
+          <th>P-Litres</th><th>D-Litres</th><th>Total L</th>
+          <th>Sales KES</th><th>M-Pesa</th><th>Cash</th>
+          <th>Expenses</th><th class="priv">Profit</th><th>VAT</th><th>Tax Total</th><th>Status</th><th>Del</th>
+        </tr></thead>
+        <tbody id="recBody">
+          <tr><td colspan="15" style="text-align:center;padding:32px;color:var(--mut);font-family:var(--mono);font-size:.76rem">No records yet — save a daily entry first.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  </div><!-- /panels -->
+  </div><!-- /workspace -->
+
+</main>
+
+<!-- ══ KRA MODAL ══ -->
+<div class="overlay" id="kraOverlay">
+  <div class="modal">
+    <div class="m-title">🇰🇪 KRA iTax — Daily Filing Preview</div>
+    <div class="m-sub">Kenya Revenue Authority · Petroleum Station Tax Declaration</div>
+    <div class="m-sec">
+      <div class="m-sec-ttl">Taxpayer Details</div>
+      <div class="m-row"><span>PIN</span><span id="mPin">—</span></div>
+      <div class="m-row"><span>Business Name</span><span id="mBiz">—</span></div>
+      <div class="m-row"><span>Tax Period</span><span id="mPeriod">—</span></div>
+      <div class="m-row"><span>Return Type</span><span id="mRType">—</span></div>
+      <div class="m-row"><span>ETR Machine No.</span><span id="mEtr">—</span></div>
+      <div class="m-row"><span>Filing Date</span><span id="mDate">—</span></div>
+    </div>
+    <div class="m-sec">
+      <div class="m-sec-ttl">Sales Data</div>
+      <div class="m-row"><span>Super Petrol Litres</span><span id="mPL">—</span></div>
+      <div class="m-row"><span>Diesel Litres</span><span id="mDL">—</span></div>
+      <div class="m-row"><span>Kerosene Litres</span><span id="mKL">—</span></div>
+      <div class="m-row"><span>Gross Revenue (VAT-incl.)</span><span id="mGross">—</span></div>
+    </div>
+    <div class="m-sec">
+      <div class="m-sec-ttl">Tax Breakdown (C++ Computed)</div>
+      <div class="m-row"><span>Taxable Sales (Ex-VAT)</span><span id="mExVat">—</span></div>
+      <div class="m-row"><span>Output VAT @ 16%</span><span id="mVat">—</span></div>
+      <div class="m-row"><span>Excise Duty — Petrol</span><span id="mExcP">—</span></div>
+      <div class="m-row"><span>Excise Duty — Diesel</span><span id="mExcD">—</span></div>
+      <div class="m-row"><span>Excise Duty — Kerosene</span><span id="mExcK">—</span></div>
+      <div class="m-row"><span>Road Levy — Petrol</span><span id="mRLP">—</span></div>
+      <div class="m-row"><span>Road Levy — Diesel</span><span id="mRLD">—</span></div>
+      <div class="m-row" style="border-top:1px solid var(--acc2);margin-top:6px;padding-top:8px">
+        <span><b>TOTAL VAT + EXCISE PAYABLE</b></span>
+        <span id="mTotal" style="color:#ffd700;font-size:1rem">—</span>
+      </div>
+    </div>
+    <div class="m-sec">
+      <div class="m-sec-ttl">Remarks</div>
+      <div id="mRemarks" style="font-family:var(--mono);font-size:.74rem;color:var(--mut)">None</div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="closeKra()">Close</button>
+      <button class="btn btn-y" onclick="window.print()">🖨️ Print / Download</button>
+      <button class="btn btn-g" data-save-btn onclick="saveRec().then(closeKra)">💾 Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RECORD DETAIL MODAL ══ -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal" style="max-width:640px">
+    <div class="m-title">📄 Daily Record — <span id="rdStation" translate="no">—</span></div>
+    <div class="m-sub" id="rdDate">—</div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">⛽ Fuel Sales</div>
+      <div class="m-row"><span>Super Petrol</span><span id="rdPetrol">—</span></div>
+      <div class="m-row"><span>Diesel (AGO)</span><span id="rdDiesel">—</span></div>
+      <div class="m-row"><span>Kerosene (IK)</span><span id="rdKero">—</span></div>
+      <div class="m-row"><span>Total Litres</span><span id="rdTotalL">—</span></div>
+    </div>
+
+    <div class="m-sec" id="rdPumpSec" style="display:none">
+      <div class="m-sec-ttl">⛽ Pumps &amp; Sales Meter Check</div>
+      <div id="rdPumpItems"></div>
+    </div>
+
+    <div class="m-sec" id="rdDipSec" style="display:none">
+      <div class="m-sec-ttl">📏 Tank Dip Reconciliation</div>
+      <div id="rdDipItems"></div>
+    </div>
+
+    <div class="m-sec" id="rdGasSec" style="display:none">
+      <div class="m-sec-ttl">🛢️ Gases & Lubricants</div>
+      <div id="rdGasItems"></div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">💳 Payments Collected</div>
+      <div class="m-row"><span>M-Pesa</span><span id="rdMpesa">—</span></div>
+      <div class="m-row"><span>Cash</span><span id="rdCash">—</span></div>
+      <div class="m-row"><span>Credit</span><span id="rdCredit">—</span></div>
+      <div class="m-row"><span>Card</span><span id="rdCard">—</span></div>
+      <div class="m-row" style="border-top:1px solid var(--brd);margin-top:4px;padding-top:6px">
+        <span><b>Total Collected</b></span><span id="rdTotalCollected">—</span>
+      </div>
+    </div>
+
+    <div class="m-sec" id="rdInvoiceSec" style="display:none">
+      <div class="m-sec-ttl">🧾 Credit Customer Invoices</div>
+      <div id="rdInvoiceItems"></div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">📋 Expenses</div>
+      <div class="m-row"><span>Wages</span><span id="rdWages">—</span></div>
+      <div class="m-row"><span>Electricity</span><span id="rdElec">—</span></div>
+      <div class="m-row"><span>Water</span><span id="rdWater">—</span></div>
+      <div class="m-row"><span>Maintenance</span><span id="rdMaint">—</span></div>
+      <div class="m-row"><span>Lubricants Stock</span><span id="rdLubes">—</span></div>
+      <div class="m-row"><span>Miscellaneous</span><span id="rdMisc">—</span></div>
+      <div id="rdMiscItems"></div>
+      <div class="m-row" style="border-top:1px solid var(--brd);margin-top:4px;padding-top:6px">
+        <span><b>Total Expenses</b></span><span id="rdTotalExp">—</span>
+      </div>
+    </div>
+
+    <div class="m-sec priv">
+      <div class="m-sec-ttl">📈 Profit & Loss</div>
+      <div class="m-row"><span>Gross Revenue</span><span id="rdGross">—</span></div>
+      <div class="m-row"><span>Total Cost</span><span id="rdTotalCost">—</span></div>
+      <div class="m-row" style="border-top:1px solid var(--acc);margin-top:6px;padding-top:8px">
+        <span><b>Net Profit</b></span><span id="rdProfit" style="font-size:1rem">—</span>
+      </div>
+      <div class="m-row"><span>Profit Margin</span><span id="rdMargin">—</span></div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">🇰🇪 KRA Tax</div>
+      <div class="m-row"><span>Output VAT @ 16%</span><span id="rdVat">—</span></div>
+      <div class="m-row"><span>Total Excise Duty</span><span id="rdExcise">—</span></div>
+      <div class="m-row" style="border-top:1px solid var(--acc2);margin-top:4px;padding-top:6px">
+        <span><b>Total Tax Payable</b></span><span id="rdTax" style="color:#ffd700">—</span>
+      </div>
+      <div class="m-row"><span>KRA PIN</span><span id="rdKraPin">—</span></div>
+      <div class="m-row"><span>Return Type</span><span id="rdKraType">—</span></div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">✅ Day Approval</div>
+      <div class="m-row"><span>Status</span><span id="rdApproval">—</span></div>
+    </div>
+
+    <div class="m-sec" id="rdMismatchSec" hidden>
+      <div class="m-sec-ttl">⚠️ Opening Readings Check</div>
+      <div id="rdMismatches"></div>
+    </div>
+
+    <div class="m-sec" id="rdReceiptsSec" hidden>
+      <div class="m-sec-ttl">📷 Receipt Photos</div>
+      <div id="rdReceipts" class="receipt-grid"></div>
+    </div>
+
+    <div class="m-sec" id="rdDeliveriesSec" hidden>
+      <div class="m-sec-ttl">🚚 Deliveries</div>
+      <div id="rdDeliveries"></div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">🕘 Change History</div>
+      <div id="rdHistory" class="history-list"><div class="m-row"><span>Loading…</span></div></div>
+    </div>
+
+    <div class="m-sec" id="rdRemarksSec" style="display:none">
+      <div class="m-sec-ttl">Remarks</div>
+      <div id="rdRemarks" style="font-family:var(--mono);font-size:.74rem;color:var(--mut)">—</div>
+    </div>
+
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="closeDetail()">Close</button>
+      <button class="btn btn-y" onclick="window.print()">🖨️ Print</button>
+      <button class="btn btn-b" id="rdApproveBtn" onclick="approveDetail(true)" hidden>✅ Approve Day</button>
+      <button class="btn btn-o" id="rdReopenBtn" onclick="approveDetail(false)" hidden>🔓 Reopen Day</button>
+      <button class="btn btn-r" id="rdDeleteBtn" onclick="deleteFromDetail()">🗑️ Move to Bin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ IN-PAGE CONFIRM MODAL (never blocked by browser dialog suppression) ══ -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
+    <div class="m-title" id="confirmTitle" style="margin-bottom:10px">Are you sure?</div>
+    <div id="confirmMessage" style="font-family:var(--mono);font-size:.82rem;color:var(--mut);
+      white-space:pre-line;line-height:1.6;margin-bottom:22px">—</div>
+    <div class="m-foot" style="justify-content:center">
+      <button class="btn btn-o" onclick="closeConfirmModal(false)">Cancel</button>
+      <button class="btn btn-r" id="confirmActionBtn" onclick="closeConfirmModal(true)">Yes, Proceed</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SIGN-IN ══ -->
+<div class="overlay login-overlay" id="loginOverlay">
+  <form class="modal login-modal" id="loginForm" onsubmit="doLogin(event)" autocomplete="on">
+    <div class="logo" style="justify-content:center;margin-bottom:18px">
+      <div class="logo-mark">⛽</div>
+      <div class="logo-text">
+        <h1>Petro<span>Kenya</span></h1>
+        <small>STATION MANAGEMENT SYSTEM</small>
+      </div>
+    </div>
+    <div class="ig" style="margin-bottom:12px">
+      <label for="loginUser">Username</label>
+      <input type="text" id="loginUser" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    </div>
+    <div class="ig" style="margin-bottom:16px">
+      <label for="loginPass">Password</label>
+      <input type="password" id="loginPass" autocomplete="current-password" required>
+    </div>
+    <div id="loginError" class="login-error"></div>
+    <button class="btn btn-g" id="loginBtn" type="submit" style="width:100%">Sign in</button>
+    <div class="lang-switch" style="margin-top:10px"><button type="button" onclick="showForgot()">Forgot password?</button></div>
+    <div class="m-sub" style="margin:10px 0 0;text-align:center">Ask your administrator for an account.</div>
+    <div class="lang-switch">🌐 <button type="button" onclick="setLanguage('en')">English</button> ·
+      <button type="button" onclick="setLanguage('sw')">Kiswahili</button></div>
+  </form>
+
+  <!-- Forgot password: a 6-digit code by email or SMS -->
+  <div class="modal login-modal" id="forgotBox" hidden>
+    <div class="m-title">🔑 Forgot password</div>
+    <div class="m-sub">Enter your username. A 6-digit code is sent to your email or phone — or, if your
+      account has neither, to the admin, who can give it to you.</div>
+    <form id="fpStep1" onsubmit="sendResetCode(event)">
+      <div class="ig" style="margin-bottom:12px"><label for="fpUser">Username</label>
+        <input type="text" id="fpUser" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+      <button class="btn btn-g" id="fpSendBtn" type="submit" style="width:100%">✉️ Send Code</button>
+    </form>
+    <form id="fpStep2" onsubmit="finishReset(event)" hidden>
+      <div class="info-note" id="fpSent" style="margin-bottom:12px"></div>
+      <div class="ig" style="margin-bottom:12px"><label for="fpCode">6-digit code</label>
+        <input type="text" id="fpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+      <div class="ig" style="margin-bottom:12px"><label for="fpNew">New password (8+ chars, not a common one)</label>
+        <input type="password" id="fpNew" autocomplete="new-password" required></div>
+      <button class="btn btn-g" id="fpResetBtn" type="submit" style="width:100%">🔑 Set New Password</button>
+      <div class="lang-switch"><button type="button" onclick="showForgotStep(1)">Send a new code</button></div>
+    </form>
+    <div id="fpError" class="login-error" style="margin-top:10px"></div>
+    <div class="lang-switch"><button type="button" onclick="backToLogin()">← Back to sign in</button></div>
+  </div>
+</div>
+
+<!-- ══ ACCOUNT & USERS ══ -->
+<div class="overlay" id="accountOverlay">
+  <div class="modal">
+    <div class="m-title">👤 <span id="acctName">—</span></div>
+    <div class="m-sub" id="acctRole">—</div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">Lugha / Language</div>
+      <div class="lang-switch" style="justify-content:flex-start">🌐 <button type="button" onclick="setLanguage('en')">English</button> ·
+        <button type="button" onclick="setLanguage('sw')">Kiswahili</button></div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">Your Name</div>
+      <div class="ig"><label for="meFullName">Full name (shown as Operator)</label>
+        <input type="text" id="meFullName" maxlength="60" placeholder="e.g. Mary Wanjiku" autocomplete="name"></div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-b btn-sm" onclick="saveMyName()">💾 Save Name</button>
+      </div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">Your Email &amp; Phone</div>
+      <div class="m-sub" style="margin:0 0 8px">Used to send you a code if you forget your password.</div>
+      <div class="g2" style="gap:10px">
+        <div class="ig"><label for="meEmail">Email</label>
+          <input type="email" id="meEmail" maxlength="120" placeholder="e.g. mary@gmail.com" autocomplete="email"></div>
+        <div class="ig"><label for="mePhone">Phone (for SMS)</label>
+          <input type="tel" id="mePhone" maxlength="20" placeholder="e.g. 0712 345 678" autocomplete="tel"></div>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-b btn-sm" onclick="saveMyContact()">💾 Save Email &amp; Phone</button>
+      </div>
+    </div>
+
+    <div class="m-sec">
+      <div class="m-sec-ttl">Change Password</div>
+      <div class="g2" style="gap:10px">
+        <div class="ig"><label for="pwCurrent">Current Password</label>
+          <input type="password" id="pwCurrent" autocomplete="current-password"></div>
+        <div class="ig"><label for="pwNew">New Password (8+ chars, not a common one)</label>
+          <input type="password" id="pwNew" autocomplete="new-password"></div>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-b btn-sm" onclick="changePassword()">🔑 Update Password</button>
+      </div>
+    </div>
+
+    <div class="m-sec" id="stationsSec" hidden>
+      <div class="m-sec-ttl">🏪 Branches (Admin)</div>
+      <div id="stationsList"></div>
+      <div class="g2" style="gap:10px;margin-top:10px">
+        <div class="ig" style="grid-column:1/-1"><label for="nsName">New branch name</label>
+          <input type="text" id="nsName" maxlength="60" placeholder="e.g. Ngeria Branch"
+                 onkeydown="if(event.key==='Enter')addStation()"></div>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-g btn-sm" onclick="addStation()">➕ Add Branch</button>
+      </div>
+    </div>
+
+    <div class="m-sec" id="usersSec" style="display:none">
+      <div class="m-sec-ttl">Users (Admin)</div>
+      <div id="usersList"></div>
+      <div class="g2" style="gap:10px;margin-top:12px">
+        <div class="ig"><label for="nuFullName">Full Name</label>
+          <input type="text" id="nuFullName" maxlength="60" placeholder="e.g. Mary Wanjiku"></div>
+        <div class="ig"><label for="nuName">Username</label>
+          <input type="text" id="nuName" autocapitalize="none" spellcheck="false"></div>
+        <div class="ig"><label for="nuPass">Password (8+ chars, not a common one)</label>
+          <input type="password" id="nuPass" autocomplete="new-password"></div>
+        <div class="ig"><label for="nuRole">Role</label>
+          <select id="nuRole">
+            <option value="staff">Staff</option>
+            <option value="manager">Branch Manager</option>
+            <option value="admin">Admin</option>
+          </select></div>
+        <div class="ig"><label for="nuEmail">Email (optional)</label>
+          <input type="email" id="nuEmail" maxlength="120" placeholder="for password resets"></div>
+        <div class="ig"><label for="nuPhone">Phone (optional)</label>
+          <input type="tel" id="nuPhone" maxlength="20" placeholder="e.g. 0712 345 678"></div>
+        <div class="ig"><label for="nuStation">Branch (required for managers)</label>
+          <select id="nuStation">
+            <option value="">All branches</option>
+          </select></div>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-g btn-sm" onclick="addUser()">➕ Add User</button>
+      </div>
+    </div>
+
+    <div class="m-sec" id="alertSettingsSec" hidden>
+      <div class="m-sec-ttl">Alert Settings (Admin)</div>
+      <div class="g2" style="gap:10px">
+        <div class="ig" style="grid-column:1/-1"><label for="asEmails">Email alerts to (comma-separated)</label>
+          <input type="text" id="asEmails" placeholder="owner@example.com, manager@example.com"></div>
+        <div class="ig"><label for="asDip">Tank short by more than (L)</label><input type="number" id="asDip"></div>
+        <div class="ig"><label for="asCash">Cash short by more than (KES)</label><input type="number" id="asCash"></div>
+        <div class="ig"><label for="asAttendant">Attendant short by more than (KES)</label><input type="number" id="asAttendant"></div>
+        <div class="ig"><label for="asDelivery">Delivery short by more than (L)</label><input type="number" id="asDelivery"></div>
+        <div class="ig"><label for="asLowPetrol">Low petrol below (L)</label><input type="number" id="asLowPetrol"></div>
+        <div class="ig"><label for="asLowDiesel">Low diesel below (L)</label><input type="number" id="asLowDiesel"></div>
+        <div class="ig"><label for="asLowKero">Low kerosene below (L)</label><input type="number" id="asLowKero"></div>
+      </div>
+      <div class="m-sub" id="asEmailState" style="margin:10px 0 0"></div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-g btn-sm" onclick="saveAlertSettings()">💾 Save Alert Settings</button>
+        <button class="btn btn-o btn-sm" onclick="testAlertEmail()">✉️ Send Test Email</button>
+      </div>
+    </div>
+
+    <div class="m-sec" id="backupSec" hidden>
+      <div class="m-sec-ttl">💾 Backups (Admin)</div>
+      <div class="m-sub" id="bkState" style="margin:0 0 10px"></div>
+      <div class="ig"><label for="bkEmails">Email the nightly backup to (comma-separated)</label>
+        <input type="text" id="bkEmails" placeholder="owner@example.com"></div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-g btn-sm" onclick="saveBackupEmails()">💾 Save</button>
+        <button class="btn btn-o btn-sm" onclick="backupNow()">⬇️ Back Up Now</button>
+        <button class="btn btn-o btn-sm" onclick="emailBackupNow()">✉️ Email a Backup Now</button>
+      </div>
+      <div id="bkList" style="margin-top:10px"></div>
+    </div>
+
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="logoutOtherDevices()">Sign out other devices</button>
+      <button class="btn btn-r" onclick="logout()">⎋ Sign out</button>
+      <button class="btn btn-o" onclick="closeAccount()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ALERTS ══ -->
+<div class="overlay" id="alertsOverlay">
+  <div class="modal" style="max-width:640px">
+    <div class="m-title">🔔 Alerts</div>
+    <div class="m-sub">Raised automatically when a saved day shows a problem. They clear themselves when the day is corrected.</div>
+    <div id="alertsList"></div>
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="markAlertsRead()">Mark all read</button>
+      <button class="btn btn-o" onclick="closeAlerts()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CUSTOMER STATEMENT ══ -->
+<div class="overlay" id="statementOverlay">
+  <div class="modal" style="max-width:680px">
+    <div class="m-title">🧾 <span id="stName">—</span></div>
+    <div class="m-sub" id="stSub">—</div>
+    <div class="m-sec">
+      <div class="m-sec-ttl">Statement</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Amount</th><th>Balance</th><th>Details</th><th>Branch</th><th></th></tr></thead>
+        <tbody id="stBody"></tbody>
+      </table></div>
+    </div>
+    <div class="m-sec">
+      <div class="m-sec-ttl">Record a Payment</div>
+      <div class="g4">
+        <div class="ig"><label for="payAmount">Amount (KES)</label><input type="number" id="payAmount" step="0.01"></div>
+        <div class="ig"><label for="payMethod">Method</label>
+          <select id="payMethod"><option>M-Pesa</option><option>Cash</option><option>Bank transfer</option><option>Cheque</option></select></div>
+        <div class="ig"><label for="payRef">Reference</label><input type="text" id="payRef" placeholder="e.g. RGK7ABC123"></div>
+        <div class="ig"><label for="payDate">Date</label><input type="date" id="payDate"></div>
+      </div>
+      <div class="actions" style="margin-top:10px"><button class="btn btn-g btn-sm" onclick="recordPayment()">💾 Record Payment</button></div>
+    </div>
+    <div class="m-sec" id="stLimitSec" hidden>
+      <div class="m-sec-ttl">Credit Limit (Manager / Admin)</div>
+      <div class="g2" style="gap:10px">
+        <div class="ig"><label for="stLimit">Credit limit (KES, 0 = none)</label><input type="number" id="stLimit" step="100"></div>
+        <div class="ig"><label for="stPhone">Phone</label><input type="text" id="stPhone"></div>
+      </div>
+      <div class="actions" style="margin-top:10px"><button class="btn btn-b btn-sm" onclick="saveCustomer()">💾 Save Account</button></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="printModal()">🖨️ Print Statement</button>
+      <button class="btn btn-o" onclick="closeStatement()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BIN (admin) ══ -->
+<div class="overlay" id="binOverlay">
+  <div class="modal" style="max-width:640px">
+    <div class="m-title">🗑️ Bin</div>
+    <div class="m-sub">Records moved to the bin. Restore one to put it back, or delete it for good.
+      Every version stays in the change history either way.</div>
+    <div id="binList"></div>
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="closeBin()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/i18n.js?v=18"></script>
+<script src="js/app.js?v=18"></script>
+</body>
+</html>

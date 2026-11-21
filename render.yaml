@@ -1,0 +1,40 @@
+# One-click hosting on Render (https://render.com) — New → Blueprint → pick this repo.
+# The persistent disk keeps the SQLite database, receipt photos and nightly backups across
+# deploys (requires a paid instance). Step-by-step guide: README → Put it online.
+services:
+  - type: web
+    name: petrokenya
+    runtime: python
+    plan: starter
+    buildCommand: "true"
+    startCommand: python3 backend/server.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHONUNBUFFERED    # show the server's messages in Render's log straight away
+        value: "1"
+      - key: HOST
+        value: 0.0.0.0
+      - key: PK_DB
+        value: /var/data/petrokenya.sqlite3
+      - key: PK_SECURE_COOKIE
+        value: "1"
+      - key: PK_TRUST_PROXY   # Render's proxy sets X-Forwarded-For
+        value: "1"
+      - key: PK_ADMIN_USER
+        value: admin
+      - key: PK_ADMIN_PASSWORD
+        sync: false   # Render asks you to type this in when you create the service
+      - key: PK_SMTP_HOST        # optional: alert emails (e.g. smtp.gmail.com)
+        sync: false
+      - key: PK_SMTP_USER
+        sync: false
+      - key: PK_SMTP_PASSWORD    # an app password, kept secret by Render
+        sync: false
+      - key: PK_SMS_USERNAME     # optional: password reset codes by SMS (Africa's Talking)
+        sync: false
+      - key: PK_SMS_API_KEY
+        sync: false
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
